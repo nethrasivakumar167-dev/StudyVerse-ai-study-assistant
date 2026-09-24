@@ -1,0 +1,5 @@
+# Never commit real secrets
+.env
+
+# In-memory MongoDB binaries downloaded by mongodb-memory-server
+.cache

@@ -1,0 +1,191 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --font-orbitron: 'Orbitron', sans-serif;
+    --font-rajdhani: 'Rajdhani', sans-serif;
+    --font-space: 'Space Grotesk', sans-serif;
+    --font-outfit: 'Outfit', sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+
+    /* Default Theme Variables */
+    --suit-red: #c01828;
+    --suit-red-dark: #6e0c15;
+    --suit-gold: #f4c430;
+    --suit-gold-dark: #8c6a0f;
+    --arc-glow: #00f7ff;
+    --arc-glow-rgba: rgba(0, 247, 255, 0.45);
+    --bg-radial: radial-gradient(circle at 50% 45%, rgba(180, 20, 30, 0.35) 0%, rgba(10, 10, 20, 0.95) 75%);
+  }
+
+  body {
+    background-color: #06070c;
+    color: #e2e8f0;
+    font-family: var(--font-space);
+  }
+}
+
+/* Armor Themes */
+.theme-mark85 {
+  --suit-red: #c01828;
+  --suit-red-dark: #5e0811;
+  --suit-gold: #f4c430;
+  --suit-gold-dark: #8c6a0f;
+  --arc-glow: #00f7ff;
+  --arc-glow-rgba: rgba(0, 247, 255, 0.5);
+  --bg-radial: radial-gradient(circle at 50% 45%, rgba(180, 20, 30, 0.35) 0%, rgba(10, 10, 20, 0.95) 75%);
+}
+
+.theme-nanotech {
+  --suit-red: #940e1c;
+  --suit-red-dark: #3b0309;
+  --suit-gold: #00f7ff;
+  --suit-gold-dark: #006b80;
+  --arc-glow: #00f7ff;
+  --arc-glow-rgba: rgba(0, 247, 255, 0.7);
+  --bg-radial: radial-gradient(circle at 50% 45%, rgba(0, 180, 240, 0.3) 0%, rgba(10, 10, 20, 0.95) 75%);
+}
+
+.theme-stealth {
+  --suit-red: #242933;
+  --suit-red-dark: #11141a;
+  --suit-gold: #ffd000;
+  --suit-gold-dark: #8c7300;
+  --arc-glow: #ffd000;
+  --arc-glow-rgba: rgba(255, 208, 0, 0.5);
+  --bg-radial: radial-gradient(circle at 50% 45%, rgba(255, 208, 0, 0.18) 0%, rgba(8, 8, 12, 0.98) 75%);
+}
+
+.theme-hulkbuster {
+  --suit-red: #8f0e1a;
+  --suit-red-dark: #40040a;
+  --suit-gold: #e59500;
+  --suit-gold-dark: #7a4f00;
+  --arc-glow: #ff7700;
+  --arc-glow-rgba: rgba(255, 119, 0, 0.6);
+  --bg-radial: radial-gradient(circle at 50% 45%, rgba(220, 60, 20, 0.4) 0%, rgba(10, 8, 10, 0.98) 75%);
+}
+
+.font-orbitron {
+  font-family: var(--font-orbitron);
+}
+
+.font-rajdhani {
+  font-family: var(--font-rajdhani);
+}
+
+.font-space {
+  font-family: var(--font-space);
+}
+
+.font-outfit {
+  font-family: var(--font-outfit);
+}
+
+.font-mono {
+  font-family: var(--font-mono);
+}
+
+/* Stencil & Brush Typography */
+.brush-hero-text {
+  font-family: 'Orbitron', sans-serif;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-shadow: 0 0 40px rgba(230, 36, 41, 0.5), 0 0 90px var(--arc-glow-rgba);
+  -webkit-text-stroke: 1.5px rgba(255, 255, 255, 0.2);
+  line-height: 0.88;
+}
+
+/* Grids & Scanlines */
+.saturday-grid {
+  background-size: 40px 40px;
+  background-image: 
+    linear-gradient(to right, rgba(0, 247, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0, 247, 255, 0.04) 1px, transparent 1px);
+}
+
+.cyber-grid {
+  background-size: 40px 40px;
+  background-image: 
+    linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+}
+
+.holo-scanlines {
+  background: linear-gradient(rgba(18, 16, 26, 0) 50%, rgba(0, 247, 255, 0.03) 50%);
+  background-size: 100% 4px;
+}
+
+/* Keyframes & Animations */
+@keyframes spinClockwise {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes spinCounter {
+  from { transform: rotate(360deg); }
+  to { transform: rotate(0deg); }
+}
+
+.spin-cw {
+  animation: spinClockwise 12s linear infinite;
+  transform-origin: center;
+}
+
+.spin-ccw {
+  animation: spinCounter 8s linear infinite;
+  transform-origin: center;
+}
+
+@keyframes eyePulse {
+  0%, 100% {
+    filter: drop-shadow(0 0 6px var(--arc-glow)) drop-shadow(0 0 16px var(--arc-glow));
+    opacity: 0.95;
+  }
+  50% {
+    filter: drop-shadow(0 0 14px #ffffff) drop-shadow(0 0 30px var(--arc-glow));
+    opacity: 1;
+  }
+}
+
+.visor-glow {
+  animation: eyePulse 2.8s ease-in-out infinite;
+}
+
+@keyframes holoSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes holoSpinReverse {
+  from { transform: rotate(360deg); }
+  to { transform: rotate(0deg); }
+}
+
+.animate-holo-spin {
+  animation: holoSpin 25s linear infinite;
+}
+
+.animate-holo-spin-reverse {
+  animation: holoSpinReverse 20s linear infinite;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: #07080d;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #e62429;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #f5c542;
+}
