@@ -17,6 +17,7 @@ import explainRoutes from './routes/explain.js';
 import quizRoutes from './routes/quiz.js';
 import notesRoutes from './routes/notes.js';
 import missionRoutes from './routes/missions.js';
+import uploadRoutes from './routes/uploads.js';
 
 import mongoose from 'mongoose';
 import { getLLMStatus } from './services/llmService.js';
@@ -77,6 +78,7 @@ app.use('/api/explain', aiRateLimiter, explainRoutes);
 app.use('/api/quiz', aiRateLimiter, quizRoutes);
 app.use('/api/notes', notesRoutes);
 app.use('/api/missions', aiRateLimiter, missionRoutes);
+app.use('/api/uploads', uploadRoutes);
 
 // 404
 app.use((req, res) => res.status(404).json({ message: `Route not found: ${req.method} ${req.originalUrl}` }));
