@@ -1,4 +1,5 @@
 import api from './api';
+import { downloadApiFile, downloadClientFile } from '../utils/download';
 
 // Fisher-Yates shuffle of a question's options with correctAnswer remapped,
 // so offline/mock quizzes never lock the answer to position A either.
@@ -55,5 +56,29 @@ export const quizService = {
         bonusMessage: accuracy === 100 ? '⚡ FLAWLESS COMBAT VICTORY! +100 BONUS XP' : 'Mission Accomplished!'
       };
     }
+  },
+
+  // Export quiz as PDF or JSON
+  exportQuiz: async (id, format = 'pdf', quizData = null) => {
+    const cleanTopic = (quizData?.topic || 'quiz_dossier').replace(/[^a-zA-Z0-9_-]/g, '_');
+    const fallbackFilename = `${cleanTopic}.${format}`;
+
+    try {
+      if (id && !String(id).startsWith('quiz-local-')) {
+        return await downloadApiFile(`/quizzes/${id}/export?format=${format}`, fallbackFilename);
+      }
+    } catch (err) {
+      console.warn('[quizService] Backend export failed, checking offline fallback:', err);
+    }
+
+    // Offline fallback for JSON
+    if (format === 'json' && quizData) {
+      const jsonStr = JSON.stringify(quizData, null, 2);
+      downloadClientFile(jsonStr, fallbackFilename, 'application/json;charset=utf-8');
+      return fallbackFilename;
+    }
+
+    return await downloadApiFile(`/quizzes/${id}/export?format=${format}`, fallbackFilename);
   }
 };
+

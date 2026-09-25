@@ -9,13 +9,15 @@ import { ComboMeter } from '../components/quiz/ComboMeter';
 import { VictoryScreen } from '../components/quiz/VictoryScreen';
 import { HolographicCard } from '../components/ui/HolographicCard';
 import { EnergyButton } from '../components/ui/EnergyButton';
+import { ExportDropdown } from '../components/ui/ExportDropdown';
 import {
   Swords,
   Timer,
   ArrowRight,
   Shield,
-  Zap,
-  RotateCcw
+  RotateCcw,
+  FileText,
+  FileJson
 } from 'lucide-react';
 
 export const BattleArena = () => {
@@ -318,6 +320,20 @@ export const BattleArena = () => {
             </div>
 
             <div className="flex items-center gap-3">
+              <ExportDropdown
+                label="Export Quiz"
+                size="sm"
+                variant="tactical"
+                options={[
+                  { label: 'PDF Combat Dossier', format: 'pdf', ext: '.pdf', icon: FileText },
+                  { label: 'JSON Dataset', format: 'json', ext: '.json', icon: FileJson }
+                ]}
+                onExport={(format) => {
+                  const qId = quizData.quizId || quizData.id || quizData._id;
+                  return quizService.exportQuiz(qId, format, quizData);
+                }}
+              />
+
               <div className="text-right">
                 <div className="text-[10px] font-rajdhani text-slate-400 uppercase">XP GAINED</div>
                 <div className="text-sm font-mono font-bold text-amber-300">+{earnedXp} XP</div>
@@ -364,6 +380,7 @@ export const BattleArena = () => {
       {gameState === 'VICTORY' && victoryData && (
         <VictoryScreen
           results={victoryData}
+          quizData={quizData}
           onPlayAgain={() => setGameState('SETUP')}
           onGoToDashboard={() => navigate('/dashboard')}
         />

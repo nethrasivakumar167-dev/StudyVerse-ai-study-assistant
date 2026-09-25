@@ -6,6 +6,7 @@ import { notesService } from '../services/notesService';
 import { SAMPLE_TOPICS } from '../data/mockData';
 import { HolographicCard } from '../components/ui/HolographicCard';
 import { EnergyButton } from '../components/ui/EnergyButton';
+import { ExportDropdown } from '../components/ui/ExportDropdown';
 import { Badge } from '../components/ui/Badge';
 import {
   FlaskConical,
@@ -18,7 +19,9 @@ import {
   AlertTriangle,
   Lightbulb,
   BookOpen,
-  RotateCcw
+  RotateCcw,
+  FileText,
+  FileCode
 } from 'lucide-react';
 
 export const KnowledgeLab = () => {
@@ -29,6 +32,7 @@ export const KnowledgeLab = () => {
   const [difficulty, setDifficulty] = useState('HERO');
   const [isGenerating, setIsGenerating] = useState(false);
   const [result, setResult] = useState(null);
+  const [savedNote, setSavedNote] = useState(null);
   const [error, setError] = useState(null);
   const [savedSuccess, setSavedSuccess] = useState(false);
 
@@ -61,18 +65,25 @@ export const KnowledgeLab = () => {
           ? data.notes.bulletPoints
           : (data.sections || []).map((s) => `${s.title}: ${s.content.slice(0, 100)}`).slice(0, 5);
 
-      await notesService.saveNote({
+      const createdDoc = await notesService.saveNote({
         title: data.title || topic.trim(),
         topic: topic.trim().toUpperCase(),
         difficulty,
+        subject: data.subject || '',
         summary: data.summary || data.overview || '',
         bulletPoints: vaultBullets,
+        sections: Array.isArray(data.sections) ? data.sections : [],
+        examples: Array.isArray(data.examples) ? data.examples : [],
+        commonMistakes: Array.isArray(data.commonMistakes) ? data.commonMistakes : [],
+        examTips: Array.isArray(data.examTips) ? data.examTips : [],
+        keyFacts: Array.isArray(data.keyFacts) ? data.keyFacts : [],
         examAlert:
           data.notes?.examAlert ||
           data.examTips?.[0] ||
           data.sections?.[3]?.content ||
           'Review key definitions, edge cases, and worked examples.'
       });
+      setSavedNote(createdDoc);
       setSavedSuccess(true);
       addXp(30, 'Saved to Knowledge Vault');
     } catch (err) {
@@ -336,7 +347,7 @@ export const KnowledgeLab = () => {
 
           {/* Action CTAs */}
           <div className="pt-4 border-t border-slate-800 flex flex-wrap items-center justify-between gap-3">
-            <div className="flex flex-wrap gap-2.5">
+            <div className="flex flex-wrap items-center gap-2.5">
               <EnergyButton
                 variant="primary"
                 size="md"
@@ -354,6 +365,40 @@ export const KnowledgeLab = () => {
               >
                 Generate Battle
               </EnergyButton>
+
+              <ExportDropdown
+                size="md"
+                variant="tactical"
+                label="Export Note"
+                options={[
+                  { label: 'PDF Dossier', format: 'pdf', ext: '.pdf', icon: FileText },
+                  { label: 'Plain Text', format: 'txt', ext: '.txt', icon: FileCode }
+                ]}
+                onExport={(format) => {
+                  const noteData = {
+                    title: result.title || topic.trim(),
+                    topic: (result.topic || topic).trim().toUpperCase(),
+                    difficulty: result.difficulty || difficulty,
+                    subject: result.subject || '',
+                    summary: result.summary || result.overview || '',
+                    bulletPoints: Array.isArray(result.notes?.bulletPoints) && result.notes.bulletPoints.length
+                      ? result.notes.bulletPoints
+                      : (result.sections || []).map((s) => `${s.title}: ${s.content.slice(0, 100)}`).slice(0, 5),
+                    sections: Array.isArray(result.sections) ? result.sections : [],
+                    examples: Array.isArray(result.examples) ? result.examples : [],
+                    commonMistakes: Array.isArray(result.commonMistakes) ? result.commonMistakes : [],
+                    examTips: Array.isArray(result.examTips) ? result.examTips : [],
+                    keyFacts: Array.isArray(result.keyFacts) ? result.keyFacts : [],
+                    examAlert:
+                      result.notes?.examAlert ||
+                      result.examTips?.[0] ||
+                      result.sections?.[3]?.content ||
+                      'Review key definitions, edge cases, and worked examples.',
+                    ...(savedNote || {})
+                  };
+                  return notesService.exportNote(savedNote?.id, format, noteData);
+                }}
+              />
             </div>
 
             <button

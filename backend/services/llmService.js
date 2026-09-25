@@ -181,10 +181,12 @@ export const callGeminiGenerate = async ({
   topic = ''
 }) => {
   const client = getGenAIClient();
-  const model = process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite';
+  const primaryModel = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
+  const fallbackModels = ['gemini-3.8-flash', 'gemini-3.5-flash-lite', 'gemini-2.5-flash-lite'].filter((m) => m !== primaryModel);
+  const modelsToTry = [primaryModel, ...fallbackModels];
 
   const logTopic = topic ? ` for topic: "${topic}"` : '';
-  console.log(`[Gemini] Generating ${featureTag}${logTopic} using model: ${model}`);
+  console.log(`[Gemini] Generating ${featureTag}${logTopic} using primary model: ${primaryModel}`);
 
   const config = {
     temperature
@@ -201,12 +203,13 @@ export const callGeminiGenerate = async ({
     }
   }
 
-  // Attempt generation with up to 4 attempts on transient upstream/quota errors
+  // Attempt generation with model fallback on transient upstream/quota errors
   let lastError = null;
   for (let attempt = 1; attempt <= 4; attempt++) {
+    const currentModel = modelsToTry[(attempt - 1) % modelsToTry.length];
     try {
       const response = await client.models.generateContent({
-        model,
+        model: currentModel,
         contents,
         config
       });
@@ -219,21 +222,21 @@ export const callGeminiGenerate = async ({
       throw new Error('Gemini returned an empty response text');
     } catch (err) {
       lastError = err;
-      console.warn(`[Gemini Warning] Attempt ${attempt} failed for ${featureTag}:`, err.message);
+      console.warn(`[Gemini Warning] Attempt ${attempt} (${currentModel}) failed for ${featureTag}:`, err.message);
 
       if (attempt < 4) {
         // Extract retryDelay if present in error message or error response
-        let delayMs = 3000;
+        let delayMs = 1500;
         const msg = String(err.message || '');
         const retryMatch = msg.match(/retry in ([0-9.]+)s/i) || msg.match(/retryDelay":"([0-9.]+)s/i);
         if (retryMatch) {
-          delayMs = Math.ceil(parseFloat(retryMatch[1]) * 1000) + 1500;
+          delayMs = Math.ceil(parseFloat(retryMatch[1]) * 1000) + 1000;
         } else if (msg.includes('429') || msg.includes('RESOURCE_EXHAUSTED')) {
-          delayMs = 12000;
+          delayMs = 5000;
         } else if (msg.includes('503') || msg.includes('UNAVAILABLE')) {
-          delayMs = attempt * 3000;
-        } else {
           delayMs = attempt * 1500;
+        } else {
+          delayMs = attempt * 1000;
         }
 
         console.log(`[Gemini] Waiting ${Math.round(delayMs / 1000)}s before retry attempt ${attempt + 1}...`);

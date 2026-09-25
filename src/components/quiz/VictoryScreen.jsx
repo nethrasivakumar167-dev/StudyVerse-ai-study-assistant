@@ -1,15 +1,23 @@
 import React from 'react';
 import { HolographicCard } from '../ui/HolographicCard';
 import { EnergyButton } from '../ui/EnergyButton';
+import { ExportDropdown } from '../ui/ExportDropdown';
 import { Badge } from '../ui/Badge';
-import { Trophy, Award, Sparkles, Zap, RotateCcw, ArrowRight, ShieldCheck } from 'lucide-react';
+import { quizService } from '../../services/quizService';
+import { Trophy, Sparkles, Zap, RotateCcw, ArrowRight, FileText, FileJson } from 'lucide-react';
 
 export const VictoryScreen = ({
   results,
+  quizData,
   onPlayAgain,
   onGoToDashboard
 }) => {
   const { correctCount, totalQuestions, totalXpEarned, accuracy, rankAchieved, bonusMessage } = results;
+
+  const handleExportQuiz = async (format) => {
+    const quizId = quizData?.quizId || quizData?.id || quizData?._id;
+    await quizService.exportQuiz(quizId, format, quizData);
+  };
 
   return (
     <div className="max-w-xl mx-auto text-center animate-fade-in">
@@ -57,12 +65,28 @@ export const VictoryScreen = ({
           </div>
         </div>
 
-        <div className="flex items-center justify-center gap-2 mb-8">
+        <div className="flex items-center justify-center gap-2 mb-6">
           <span className="text-xs font-rajdhani text-slate-400 uppercase">Power Level Rank:</span>
           <Badge variant="gold" size="md">
             {rankAchieved} RANK
           </Badge>
         </div>
+
+        {/* Export Quiz Intel */}
+        {quizData && (
+          <div className="mb-8 flex items-center justify-center">
+            <ExportDropdown
+              label="Export Quiz Dossier"
+              size="md"
+              variant="outline"
+              options={[
+                { label: 'PDF Combat Dossier', format: 'pdf', ext: '.pdf', icon: FileText },
+                { label: 'JSON Dataset', format: 'json', ext: '.json', icon: FileJson }
+              ]}
+              onExport={handleExportQuiz}
+            />
+          </div>
+        )}
 
         {/* Action CTAs */}
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3.5">
@@ -90,3 +114,4 @@ export const VictoryScreen = ({
     </div>
   );
 };
+

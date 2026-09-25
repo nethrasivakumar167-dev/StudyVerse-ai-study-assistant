@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { notesService } from '../services/notesService';
 import { HolographicCard } from '../components/ui/HolographicCard';
 import { EnergyButton } from '../components/ui/EnergyButton';
+import { ExportDropdown } from '../components/ui/ExportDropdown';
 import { Badge } from '../components/ui/Badge';
 import { Modal } from '../components/ui/Modal';
 import {
@@ -15,7 +16,9 @@ import {
   Filter,
   AlertTriangle,
   Plus,
-  CheckCircle2
+  CheckCircle2,
+  FileText,
+  FileCode
 } from 'lucide-react';
 
 export const KnowledgeVault = () => {
@@ -190,6 +193,17 @@ export const KnowledgeVault = () => {
                 </span>
 
                 <div className="flex items-center gap-2">
+                  <ExportDropdown
+                    size="sm"
+                    variant="tactical"
+                    label="Export"
+                    options={[
+                      { label: 'PDF Dossier', format: 'pdf', ext: '.pdf', icon: FileText },
+                      { label: 'Plain Text', format: 'txt', ext: '.txt', icon: FileCode }
+                    ]}
+                    onExport={(format) => notesService.exportNote(note.id, format, note)}
+                  />
+
                   <button
                     onClick={() => navigate('/battle-arena', { state: { topic: note.topic } })}
                     title="Launch battle on this topic"

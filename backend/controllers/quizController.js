@@ -1,8 +1,10 @@
+import mongoose from 'mongoose';
 import { Quiz } from '../models/Quiz.js';
 import { User } from '../models/User.js';
 import { generateQuizQuestions } from '../services/aiService.js';
 import { rankForAccuracy } from '../utils/gamification.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
+import { sanitizeFilename, generateQuizJson, streamQuizPdf } from '../services/exportService.js';
 
 // GET /api/quiz/history (protected) — the authenticated user's quiz attempts
 export const getQuizHistory = asyncHandler(async (req, res) => {
@@ -30,11 +32,13 @@ export const getQuizHistory = asyncHandler(async (req, res) => {
 
 // POST /api/quiz/generate (protected)
 export const generateQuiz = asyncHandler(async (req, res) => {
-  const { topic, difficulty = 'HERO', count = 4 } = req.body;
+  const { topic, difficulty = 'HERO', count = 4, questions: preloadedQuestions } = req.body;
   const cleanTopic = (topic || '').trim() || 'General Concept';
   const safeCount = Math.min(Math.max(parseInt(count) || 4, 1), 10);
 
-  const questions = await generateQuizQuestions(cleanTopic, difficulty, safeCount);
+  const questions = Array.isArray(preloadedQuestions) && preloadedQuestions.length > 0
+    ? preloadedQuestions
+    : await generateQuizQuestions(cleanTopic, difficulty, safeCount);
 
   // Persist the full question data (with answers) server-side so submissions
   // can be validated. The stored document is the source of truth.
@@ -98,3 +102,31 @@ export const submitQuiz = asyncHandler(async (req, res) => {
     bonusMessage
   });
 });
+
+// GET /api/quiz/:id/export?format=pdf|json (protected)
+export const exportQuiz = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const format = (req.query.format || 'pdf').toLowerCase();
+
+  if (!mongoose.isValidObjectId(id)) {
+    return res.status(404).json({ message: 'Quiz not found' });
+  }
+
+  const quiz = await Quiz.findOne({ _id: id, user: req.userId });
+  if (!quiz) return res.status(404).json({ message: 'Quiz not found' });
+
+  const cleanFilename = sanitizeFilename(quiz.topic || 'quiz_dossier', 'quiz_dossier');
+
+  if (format === 'json') {
+    const jsonData = generateQuizJson(quiz);
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${cleanFilename}.json"`);
+    return res.json(jsonData);
+  }
+
+  // Default to PDF
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', `attachment; filename="${cleanFilename}.pdf"`);
+  return streamQuizPdf(quiz, res);
+});
+
