@@ -10,6 +10,7 @@ import { Login } from './pages/Login';
 import { Register } from './pages/Register';
 import { Dashboard } from './pages/Dashboard';
 import { Saturday } from './pages/Saturday';
+import { Uploads } from './pages/Uploads';
 import { KnowledgeLab } from './pages/KnowledgeLab';
 import { BattleArena } from './pages/BattleArena';
 import { KnowledgeVault } from './pages/KnowledgeVault';
@@ -43,6 +44,7 @@ function App() {
           >
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/saturday" element={<Saturday />} />
+            <Route path="/uploads" element={<Uploads />} />
             <Route path="/knowledge-lab" element={<KnowledgeLab />} />
             <Route path="/battle-arena" element={<BattleArena />} />
             <Route path="/vault" element={<KnowledgeVault />} />

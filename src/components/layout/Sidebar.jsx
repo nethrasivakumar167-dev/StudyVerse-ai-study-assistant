@@ -4,6 +4,7 @@ import { useHero } from '../../context/HeroContext';
 import {
   LayoutDashboard,
   Bot,
+  FileUp,
   FlaskConical,
   Swords,
   BookMarked,
@@ -20,6 +21,7 @@ export const Sidebar = () => {
   const navItems = [
     { to: '/dashboard', label: 'Mission Control', icon: LayoutDashboard, badge: 'Active' },
     { to: '/saturday', label: 'S.A.T.U.R.D.A.Y. AI', icon: Bot, highlight: true },
+    { to: '/uploads', label: 'Document Intel', icon: FileUp, badge: 'PDF' },
     { to: '/knowledge-lab', label: 'Knowledge Lab', icon: FlaskConical },
     { to: '/battle-arena', label: 'Battle Arena', icon: Swords, badge: '+XP' },
     { to: '/vault', label: 'Knowledge Vault', icon: BookMarked },

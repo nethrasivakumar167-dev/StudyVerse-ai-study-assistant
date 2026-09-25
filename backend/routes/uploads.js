@@ -4,7 +4,9 @@ import { Types } from 'mongoose';
 import { protect } from '../middleware/auth.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import Upload from '../models/Upload.js';
+import Quiz from '../models/Quiz.js';
 import { getGenAIClient } from '../services/llmService.js';
+import { extractAndParseJson } from '../utils/jsonRepair.js';
 
 const router = express.Router();
 
@@ -53,6 +55,70 @@ async function extractTextFromPdfBuffer(buffer) {
     return result?.text || '';
   }
   throw new Error('Unable to initialize pdf parser');
+}
+
+const XP_TABLE = [50, 75, 75, 100];
+
+const QUIZ_SCHEMA = {
+  type: 'object',
+  properties: {
+    questions: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          question: { type: 'string' },
+          options: {
+            type: 'array',
+            items: { type: 'string' }
+          },
+          correctAnswer: { type: 'integer' },
+          explanation: { type: 'string' }
+        },
+        required: ['question', 'options', 'correctAnswer', 'explanation']
+      }
+    }
+  },
+  required: ['questions']
+};
+
+function validateAndFormatQuestions(rawList, targetCount) {
+  if (!Array.isArray(rawList) || rawList.length === 0) return null;
+  const valid = [];
+  for (let i = 0; i < rawList.length; i++) {
+    const q = rawList[i];
+    if (!q || typeof q.question !== 'string' || !q.question.trim()) continue;
+    if (!Array.isArray(q.options) || q.options.length !== 4) continue;
+
+    let ca = q.correctAnswer;
+    if (!Number.isInteger(ca) || ca < 0 || ca > 3) {
+      if (typeof ca === 'string') {
+        const cLower = ca.trim().toLowerCase();
+        if (cLower === 'a' || cLower === '0') ca = 0;
+        else if (cLower === 'b' || cLower === '1') ca = 1;
+        else if (cLower === 'c' || cLower === '2') ca = 2;
+        else if (cLower === 'd' || cLower === '3') ca = 3;
+        else {
+          const idx = q.options.findIndex((opt) => String(opt).trim().toLowerCase() === cLower);
+          ca = idx !== -1 ? idx : 0;
+        }
+      } else {
+        ca = 0;
+      }
+    }
+
+    valid.push({
+      id: `q${valid.length + 1}`,
+      question: String(q.question).trim(),
+      options: q.options.map((opt) => String(opt).trim()),
+      correctAnswer: ca,
+      explanation: String(q.explanation || 'Refer to the uploaded study document.').trim(),
+      xp: XP_TABLE[valid.length % XP_TABLE.length]
+    });
+
+    if (valid.length >= targetCount) break;
+  }
+  return valid.length > 0 ? valid : null;
 }
 
 /**
@@ -201,6 +267,133 @@ ${question.trim()}`;
 
     const answer = response?.text || 'No response generated.';
     return res.json({ answer });
+  })
+);
+
+/**
+ * POST /api/uploads/:id/quiz
+ * Generates a Battle Arena quiz based strictly on the uploaded document text.
+ */
+router.post(
+  '/:id/quiz',
+  protect,
+  asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const { numQuestions, count } = req.body || {};
+
+    if (!Types.ObjectId.isValid(id)) {
+      return res.status(404).json({ error: true, message: 'Document upload not found' });
+    }
+
+    const uploadDoc = await Upload.findOne({ _id: id, user: req.userId }).lean();
+    if (!uploadDoc) {
+      return res.status(404).json({ error: true, message: 'Document upload not found' });
+    }
+
+    const contextText = (uploadDoc.extractedText || '').slice(0, 30000);
+    if (!contextText.trim()) {
+      return res.status(400).json({
+        error: true,
+        message: 'The uploaded document contains no readable text to generate a quiz from.'
+      });
+    }
+
+    const safeCount = Math.min(Math.max(parseInt(numQuestions || count) || 5, 1), 10);
+    const docTitle = uploadDoc.filename.replace(/\.pdf$/i, '').trim();
+
+    const systemInstruction = `You are the Battle Arena exam author and academic quiz generator in StudyVerse.
+Generate challenging, high-yield multiple-choice questions based ONLY and EXCLUSIVELY on the provided document text.
+
+Rules:
+1. Document Exclusivity: Every single question must test real facts, formulas, principles, definitions, or mechanisms directly mentioned in the document.
+2. Exactly 4 Options: Each question must provide exactly 4 distinct options (1 correct answer and 3 realistic distractors).
+3. Correct Answer: "correctAnswer" must be a 0-based integer index (0, 1, 2, or 3) corresponding to the correct option.
+4. Explanations: Provide a concise, clear explanation derived strictly from the document.
+5. Strict JSON: Respond with valid JSON matching the schema with the "questions" array. No markdown fences.`;
+
+    const userPrompt = `DOCUMENT TEXT (from "${uploadDoc.filename}"):
+"""
+${contextText}
+"""
+
+Generate exactly ${safeCount} multiple-choice battle quiz questions testing mastery of the document text above.`;
+
+    const client = getGenAIClient();
+    const primaryModel = 'gemini-2.0-flash';
+    const fallbackModel = process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite';
+
+    const callGemini = async (model, promptExtra = '') => {
+      return await client.models.generateContent({
+        model,
+        contents: userPrompt + promptExtra,
+        config: {
+          systemInstruction,
+          temperature: 0.2,
+          responseMimeType: 'application/json',
+          responseSchema: QUIZ_SCHEMA
+        }
+      });
+    };
+
+    let rawResponseText = '';
+    try {
+      const response = await callGemini(primaryModel);
+      rawResponseText = response?.text || '';
+    } catch (err) {
+      if (err?.message?.includes('404') || err?.message?.includes('not found') || err?.status === 404) {
+        console.warn(`[Gemini Quiz] Model ${primaryModel} unavailable, falling back to ${fallbackModel}`);
+        const response = await callGemini(fallbackModel);
+        rawResponseText = response?.text || '';
+      } else {
+        throw err;
+      }
+    }
+
+    let parsed = extractAndParseJson(rawResponseText);
+    let questions = parsed?.questions || (Array.isArray(parsed) ? parsed : null);
+    let formattedQuestions = validateAndFormatQuestions(questions, safeCount);
+
+    // If parsing or validation failed, retry once with a stricter instruction
+    if (!formattedQuestions) {
+      console.warn('[Gemini Quiz] Initial JSON parse/validation failed, retrying with stricter instruction...');
+      try {
+        const retryModel = process.env.GEMINI_MODEL || fallbackModel;
+        const retryResponse = await callGemini(
+          retryModel,
+          '\n\nIMPORTANT: You must return only valid, parsable JSON matching the schema. No markdown fences.'
+        );
+        parsed = extractAndParseJson(retryResponse?.text || '');
+        questions = parsed?.questions || (Array.isArray(parsed) ? parsed : null);
+        formattedQuestions = validateAndFormatQuestions(questions, safeCount);
+      } catch (retryErr) {
+        console.error('[Gemini Quiz Retry Error]:', retryErr.message);
+      }
+    }
+
+    if (!formattedQuestions || formattedQuestions.length === 0) {
+      return res.status(502).json({
+        error: true,
+        message: 'Gemini AI failed to generate structured quiz questions from the document. Please retry.'
+      });
+    }
+
+    // Save generated quiz tagged with sourceUpload
+    const quiz = await Quiz.create({
+      user: req.userId,
+      topic: docTitle || 'Document Intel',
+      difficulty: 'HERO',
+      questions: formattedQuestions,
+      sourceUpload: uploadDoc._id
+    });
+
+    return res.status(201).json({
+      quizId: quiz._id.toString(),
+      topic: quiz.topic,
+      difficulty: quiz.difficulty,
+      totalQuestions: formattedQuestions.length,
+      totalPossibleXp: formattedQuestions.reduce((acc, q) => acc + (q.xp || 50), 0) + 100,
+      questions: formattedQuestions
+    });
   })
 );
 

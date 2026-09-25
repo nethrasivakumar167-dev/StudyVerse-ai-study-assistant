@@ -24,13 +24,13 @@ export const BattleArena = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const [gameState, setGameState] = useState('SETUP'); // 'SETUP' | 'BATTLE' | 'VICTORY'
-  const [topic, setTopic] = useState(location.state?.topic || 'Process Scheduling');
-  const [difficulty, setDifficulty] = useState(location.state?.difficulty || 'HERO');
-  const [questionCount, setQuestionCount] = useState(location.state?.count || 5);
+  const [gameState, setGameState] = useState(() => (location.state?.quizData ? 'BATTLE' : 'SETUP'));
+  const [topic, setTopic] = useState(() => location.state?.quizData?.topic || location.state?.topic || 'Process Scheduling');
+  const [difficulty, setDifficulty] = useState(() => location.state?.quizData?.difficulty || location.state?.difficulty || 'HERO');
+  const [questionCount, setQuestionCount] = useState(() => location.state?.quizData?.totalQuestions || location.state?.count || 5);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [quizData, setQuizData] = useState(null);
+  const [quizData, setQuizData] = useState(() => location.state?.quizData || null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState(null);
   const [isAnswerSubmitted, setIsAnswerSubmitted] = useState(false);
@@ -39,6 +39,25 @@ export const BattleArena = () => {
   const [earnedXp, setEarnedXp] = useState(0);
   const [victoryData, setVictoryData] = useState(null);
   const [timeLeft, setTimeLeft] = useState(30);
+
+  // Sync incoming navigation quizData
+  useEffect(() => {
+    if (location.state?.quizData) {
+      const qData = location.state.quizData;
+      setQuizData(qData);
+      setTopic(qData.topic || 'Document Intel');
+      setDifficulty(qData.difficulty || 'HERO');
+      setQuestionCount(qData.totalQuestions || qData.questions?.length || 5);
+      setGameState('BATTLE');
+      setCurrentIndex(0);
+      setCorrectCount(0);
+      setCombo(0);
+      setEarnedXp(0);
+      setSelectedAnswer(null);
+      setIsAnswerSubmitted(false);
+      setTimeLeft(30);
+    }
+  }, [location.state]);
 
   const handleSubmitAnswer = (chosenIdx = selectedAnswer) => {
     if (isAnswerSubmitted || !quizData) return;

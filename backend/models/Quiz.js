@@ -9,9 +9,11 @@ const quizSchema = new mongoose.Schema(
     // submissions can be validated. The generate route strips what it sends.
     questions: { type: [mongoose.Schema.Types.Mixed], default: [] },
     submitted: { type: Boolean, default: false },
-    score: { type: Number, default: 0 }
+    score: { type: Number, default: 0 },
+    sourceUpload: { type: mongoose.Schema.Types.ObjectId, ref: 'Upload', default: null }
   },
   { timestamps: true }
 );
 
 export const Quiz = mongoose.model('Quiz', quizSchema);
+export default Quiz;

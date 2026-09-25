@@ -1,11 +1,12 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Bot, Swords, BookMarked, Shield } from 'lucide-react';
+import { LayoutDashboard, Bot, FileUp, Swords, BookMarked, Shield } from 'lucide-react';
 
 export const MobileNav = () => {
   const items = [
     { to: '/dashboard', label: 'HQ', icon: LayoutDashboard },
     { to: '/saturday', label: 'AI Core', icon: Bot, highlight: true },
+    { to: '/uploads', label: 'Docs', icon: FileUp },
     { to: '/battle-arena', label: 'Battle', icon: Swords },
     { to: '/vault', label: 'Vault', icon: BookMarked },
     { to: '/profile', label: 'Hero', icon: Shield }
